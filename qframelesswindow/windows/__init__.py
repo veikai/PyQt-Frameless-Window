@@ -76,34 +76,25 @@ class WindowsFramelessWindow(QWidget):
 
         if msg.message == win32con.WM_NCHITTEST and self._isResizeEnabled:
             pos = QCursor.pos()
-            xPos = pos.x() - self.x()
             yPos = pos.y() - self.y()
-            w, h = self.width(), self.height()
-            lx = xPos < self.BORDER_WIDTH
-            rx = xPos > w - self.BORDER_WIDTH
-            ty = yPos < self.BORDER_WIDTH
-            by = yPos > h - self.BORDER_WIDTH
-            if lx and ty:
-                return True, win32con.HTTOPLEFT
-            elif rx and by:
-                return True, win32con.HTBOTTOMRIGHT
-            elif rx and ty:
-                return True, win32con.HTTOPRIGHT
-            elif lx and by:
-                return True, win32con.HTBOTTOMLEFT
-            elif ty:
+            if yPos < self.BORDER_WIDTH:
                 return True, win32con.HTTOP
-            elif by:
-                return True, win32con.HTBOTTOM
-            elif lx:
-                return True, win32con.HTLEFT
-            elif rx:
-                return True, win32con.HTRIGHT
+
         elif msg.message == win32con.WM_NCCALCSIZE:
             if msg.wParam:
                 rect = cast(msg.lParam, LPNCCALCSIZE_PARAMS).contents.rgrc[0]
             else:
                 rect = cast(msg.lParam, LPRECT).contents
+
+            top = rect.top
+
+            # make window resizable
+            ret = win32gui.DefWindowProc(msg.hWnd, win32con.WM_NCCALCSIZE, msg.wParam, msg.lParam)
+            if ret != 0:
+                return True, ret
+
+            # restore top to remove title bar
+            rect.top = top
 
             isMax = win_utils.isMaximized(msg.hWnd)
             isFull = win_utils.isFullScreen(msg.hWnd)
@@ -112,11 +103,6 @@ class WindowsFramelessWindow(QWidget):
             if isMax and not isFull:
                 ty = win_utils.getResizeBorderThickness(msg.hWnd, False)
                 rect.top += ty
-                rect.bottom -= ty
-
-                tx = win_utils.getResizeBorderThickness(msg.hWnd, True)
-                rect.left += tx
-                rect.right -= tx
 
             # handle the situation that an auto-hide taskbar is enabled
             if (isMax or isFull) and Taskbar.isAutoHide():
@@ -166,6 +152,9 @@ class AcrylicWindow(WindowsFramelessWindow):
                 self.windowEffect.addShadowEffect(self.winId())
 
         self.setStyleSheet("AcrylicWindow{background:transparent}")
+
+        # don't remove this line
+        self.resize(400, 400)
 
     def nativeEvent(self, eventType, message):
         """ Handle the Windows message """

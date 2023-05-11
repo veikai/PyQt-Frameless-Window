@@ -12,6 +12,7 @@ class Window(AcrylicWindow):
         super().__init__(parent=parent)
         self.setWindowTitle("Acrylic Window")
         self.titleBar.raise_()
+        self.resize(550, 550)
 
         # customize acrylic effect
         # self.windowEffect.setAcrylicEffect(self.winId(), "106EBE99")
